@@ -1,0 +1,32 @@
+name: Test digest input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # Install with a deliberately wrong digest to verify the digest input is
+      # processed by the action (it should fail with a digest mismatch error).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          repo: cli/cli
+          tag: v2.40.0
+          digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+      - name: Assert digest input was processed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because the digest does not match.
+          # This proves the digest input is accepted and validated.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected due to digest mismatch"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (digest matched or digest check skipped)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,58 @@
+name: Test install with binaries-location (binary in subdirectory)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+      RUNNER_TEMP: /tmp/runner-temp
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare runner directories
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+      - id: action
+        uses: .
+        with:
+          repo: wasmerio/wasmer
+          tag: v5.0.4
+          platform: linux
+          arch: amd64
+          binaries-location: bin
+          chmod: "0755"
+      - name: Assert wasmer is installed from bin/ subdirectory
+        run: |
+          echo "Checking for wasmer binary..."
+          echo "PATH: $PATH"
+          find /tmp/hostedtoolcache -type f 2>/dev/null | head -30 || true
+
+          # Check PATH first
+          if command -v wasmer >/dev/null 2>&1; then
+            VERSION=$(wasmer --version 2>&1 || true)
+            echo "Found wasmer on PATH, version: $VERSION"
+            if echo "$VERSION" | grep -q "5.0.4"; then
+              echo "PASS: wasmer 5.0.4 found on PATH from bin/ subdirectory"
+              exit 0
+            fi
+          fi
+
+          # Fall back: find wasmer binary in the tool cache
+          WASMER_BIN=$(find /tmp/hostedtoolcache -type f -name "wasmer" 2>/dev/null | head -1)
+          if [ -n "$WASMER_BIN" ]; then
+            echo "Found binary in cache: $WASMER_BIN"
+            chmod +x "$WASMER_BIN"
+            VERSION=$("$WASMER_BIN" --version 2>&1 || true)
+            echo "Version output: $VERSION"
+            if echo "$VERSION" | grep -q "5.0.4"; then
+              echo "PASS: wasmer 5.0.4 installed from bin/ subdirectory"
+              exit 0
+            else
+              echo "FAIL: expected wasmer 5.0.4 but got: $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "FAIL: wasmer not found on PATH or in tool cache"
+          exit 1

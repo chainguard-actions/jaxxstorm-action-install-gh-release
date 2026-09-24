@@ -1,0 +1,59 @@
+name: Test install pure binary (non-archive) release
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+      RUNNER_TEMP: /tmp/runner-temp
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare runner directories
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+      - id: action
+        uses: .
+        with:
+          repo: jqlang/jq
+          tag: jq-1.7.1
+          extension-matching: disable
+          rename-to: jq
+          chmod: "0755"
+          platform: linux
+          arch: amd64
+      - name: Assert jq binary is installed and executable
+        run: |
+          echo "Checking for jq binary..."
+          echo "PATH: $PATH"
+          find /tmp/hostedtoolcache -type f 2>/dev/null | head -30 || true
+
+          # Check PATH first
+          if command -v jq >/dev/null 2>&1; then
+            VERSION=$(jq --version 2>&1 || true)
+            echo "Found jq on PATH, version: $VERSION"
+            if echo "$VERSION" | grep -q "1.7.1"; then
+              echo "PASS: jq 1.7.1 found on PATH"
+              exit 0
+            fi
+          fi
+
+          # Fall back: find jq binary in the tool cache
+          JQ_BIN=$(find /tmp/hostedtoolcache -type f -name "jq*" 2>/dev/null | head -1)
+          if [ -n "$JQ_BIN" ]; then
+            echo "Found binary in cache: $JQ_BIN"
+            chmod +x "$JQ_BIN"
+            VERSION=$("$JQ_BIN" --version 2>&1 || true)
+            echo "Version output: $VERSION"
+            if echo "$VERSION" | grep -q "1.7.1"; then
+              echo "PASS: jq 1.7.1 installed as pure binary"
+              exit 0
+            else
+              echo "FAIL: expected jq-1.7.1 but got: $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "FAIL: jq not found on PATH or in tool cache"
+          exit 1

@@ -1,0 +1,59 @@
+name: Test install with explicit asset-name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+      RUNNER_TEMP: /tmp/runner-temp
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare runner directories
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+      - id: action
+        uses: .
+        with:
+          repo: mikefarah/yq
+          tag: v4.44.3
+          platform: linux
+          arch: amd64
+          asset-name: yq_linux_amd64
+      - name: Assert yq is installed via explicit asset name
+        run: |
+          echo "Checking for yq binary installed via explicit asset-name..."
+          echo "PATH: $PATH"
+          find /tmp/hostedtoolcache -type f 2>/dev/null | head -30 || true
+
+          # Check PATH first (core.addPath adds the tool dir)
+          for cmd in yq_linux_amd64 yq; do
+            if command -v "$cmd" >/dev/null 2>&1; then
+              VERSION=$("$cmd" --version 2>&1 || true)
+              echo "Found $cmd on PATH, version: $VERSION"
+              if echo "$VERSION" | grep -q "4.44.3"; then
+                echo "PASS: yq 4.44.3 found on PATH as $cmd via explicit asset name"
+                exit 0
+              fi
+            fi
+          done
+
+          # Fall back: find any yq binary in the tool cache
+          YQ_BIN=$(find /tmp/hostedtoolcache -type f -name "yq*" 2>/dev/null | head -1)
+          if [ -n "$YQ_BIN" ]; then
+            echo "Found binary in cache: $YQ_BIN"
+            chmod +x "$YQ_BIN"
+            VERSION=$("$YQ_BIN" --version 2>&1 || true)
+            echo "Version output: $VERSION"
+            if echo "$VERSION" | grep -q "4.44.3"; then
+              echo "PASS: yq 4.44.3 installed via explicit asset name"
+              exit 0
+            else
+              echo "FAIL: expected version 4.44.3 but got: $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "FAIL: yq binary not found on PATH or in tool cache"
+          exit 1

@@ -1,0 +1,58 @@
+name: Test install specific version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUNNER_TOOL_CACHE: /tmp/hostedtoolcache
+      RUNNER_TEMP: /tmp/runner-temp
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare runner directories
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+      - id: action
+        uses: .
+        with:
+          repo: mikefarah/yq
+          tag: v4.43.1
+          platform: linux
+          arch: amd64
+      - name: Assert specific version is installed
+        run: |
+          echo "Checking for yq v4.43.1..."
+          echo "PATH: $PATH"
+          find /tmp/hostedtoolcache -type f 2>/dev/null | head -30 || true
+
+          # Check PATH first
+          for cmd in yq yq_linux_amd64; do
+            if command -v "$cmd" >/dev/null 2>&1; then
+              VERSION=$("$cmd" --version 2>&1 || true)
+              echo "Found $cmd on PATH, version: $VERSION"
+              if echo "$VERSION" | grep -q "4.43.1"; then
+                echo "PASS: correct version 4.43.1 found on PATH as $cmd"
+                exit 0
+              fi
+            fi
+          done
+
+          # Fall back: find any yq binary in the tool cache
+          YQ_BIN=$(find /tmp/hostedtoolcache -type f -name "yq*" 2>/dev/null | head -1)
+          if [ -n "$YQ_BIN" ]; then
+            echo "Found binary in cache: $YQ_BIN"
+            chmod +x "$YQ_BIN"
+            VERSION=$("$YQ_BIN" --version 2>&1 || true)
+            echo "Version output: $VERSION"
+            if echo "$VERSION" | grep -q "4.43.1"; then
+              echo "PASS: correct version 4.43.1 found in tool cache"
+              exit 0
+            else
+              echo "FAIL: expected version 4.43.1 but got: $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "FAIL: yq v4.43.1 not found on PATH or in tool cache"
+          exit 1
