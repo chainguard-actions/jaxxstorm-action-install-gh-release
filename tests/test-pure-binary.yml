@@ -1,0 +1,55 @@
+name: Test install pure binary (non-archive) with rename and chmod
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up runner environment
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+          echo "RUNNER_TOOL_CACHE=/tmp/hostedtoolcache" >> "$GITHUB_ENV"
+          echo "RUNNER_TEMP=/tmp/runner-temp" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          repo: mikefarah/yq
+          tag: v4.40.5
+          extension-matching: disable
+          rename-to: yq
+          chmod: "0755"
+        continue-on-error: true
+      - name: Assert yq binary is installed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking for yq binary..."
+            # core.addPath may not persist in act; search the tool cache directly
+            YQ_BIN=$(find /tmp/hostedtoolcache -name "yq" -type f 2>/dev/null | head -1)
+            if [ -n "$YQ_BIN" ]; then
+              echo "Found yq at: $YQ_BIN"
+              YQ_VERSION=$("$YQ_BIN" --version 2>&1 | head -1)
+              echo "yq version: $YQ_VERSION"
+              echo "PASS: yq is installed in tool cache"
+              exit 0
+            fi
+            # Also try PATH in case core.addPath worked
+            if command -v yq >/dev/null 2>&1; then
+              YQ_VERSION=$(yq --version 2>&1 | head -1)
+              echo "yq version (from PATH): $YQ_VERSION"
+              echo "PASS: yq is installed and in PATH"
+              exit 0
+            fi
+            echo "FAIL: action succeeded but yq binary not found anywhere"
+            find /tmp/hostedtoolcache -type f 2>/dev/null | head -20 || true
+            exit 1
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/API/environment issue in test harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

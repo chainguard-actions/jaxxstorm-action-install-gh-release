@@ -1,0 +1,22 @@
+name: Test platform and arch inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repo: cli/cli
+          tag: v2.40.0
+          platform: linux
+          arch: amd64
+      - name: Assert gh binary is installed
+        run: |
+          if ! command -v gh &>/dev/null; then
+            echo "FAIL: gh binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: gh binary found at $(command -v gh)"

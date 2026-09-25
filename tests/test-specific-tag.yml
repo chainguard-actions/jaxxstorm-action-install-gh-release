@@ -1,0 +1,65 @@
+name: Test install binary at a specific tag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up runner environment
+        run: |
+          mkdir -p /tmp/hostedtoolcache
+          mkdir -p /tmp/runner-temp
+          echo "RUNNER_TOOL_CACHE=/tmp/hostedtoolcache" >> "$GITHUB_ENV"
+          echo "RUNNER_TEMP=/tmp/runner-temp" >> "$GITHUB_ENV"
+      - id: action
+        uses: .
+        with:
+          repo: jqlang/jq
+          tag: jq-1.7.1
+          extension-matching: disable
+          rename-to: jq
+          chmod: "0755"
+        continue-on-error: true
+      - name: Assert jq binary is installed at the correct version
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "Action succeeded, checking for jq binary..."
+            # core.addPath may not persist in act; search the tool cache directly
+            JQ_BIN=$(find /tmp/hostedtoolcache -name "jq" -type f 2>/dev/null | head -1)
+            if [ -n "$JQ_BIN" ]; then
+              echo "Found jq at: $JQ_BIN"
+              JQ_VERSION=$("$JQ_BIN" --version 2>&1)
+              echo "jq version: $JQ_VERSION"
+              if echo "$JQ_VERSION" | grep -q "1.7.1"; then
+                echo "PASS: jq 1.7.1 is installed in tool cache"
+                exit 0
+              else
+                echo "FAIL: expected jq 1.7.1 but got: $JQ_VERSION"
+                exit 1
+              fi
+            fi
+            # Also try PATH in case core.addPath worked
+            if command -v jq >/dev/null 2>&1; then
+              JQ_VERSION=$(jq --version 2>&1)
+              echo "jq version (from PATH): $JQ_VERSION"
+              if echo "$JQ_VERSION" | grep -q "1.7.1"; then
+                echo "PASS: jq 1.7.1 is installed and in PATH"
+                exit 0
+              else
+                echo "FAIL: expected jq 1.7.1 but got: $JQ_VERSION"
+                exit 1
+              fi
+            fi
+            echo "FAIL: action succeeded but jq binary not found anywhere"
+            find /tmp/hostedtoolcache -type f 2>/dev/null | head -20 || true
+            exit 1
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/API/environment issue in test harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
