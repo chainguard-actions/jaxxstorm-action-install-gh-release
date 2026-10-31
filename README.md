@@ -10,6 +10,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 |---------|-----|-----------------|------------------|
 | v2.1.0 | [`v2.1.0`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/tree/v2.1.0) | [`6096f2a`](https://github.com/jaxxstorm/action-install-gh-release/commit/6096f2a2bbfee498ced520b6922ac2c06e990ed2) | [`HARDENING.md`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/blob/v2.1.0/HARDENING.md) |
 | v3.0.0 | [`v3.0.0`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/tree/v3.0.0) | [`25e24d2`](https://github.com/jaxxstorm/action-install-gh-release/commit/25e24d2d23ae098373794ef1d6faecb48ee52da8) | [`HARDENING.md`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/blob/v3.0.0/HARDENING.md) |
+| v4.0.0 | [`v4.0.0`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/tree/v4.0.0) | [`b82b205`](https://github.com/jaxxstorm/action-install-gh-release/commit/b82b2052fdf822192f2119b7e289a6f63e668bc8) | [`HARDENING.md`](https://github.com/chainguard-actions/jaxxstorm-action-install-gh-release/blob/v4.0.0/HARDENING.md) |
 
 ## Privacy
 
