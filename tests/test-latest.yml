@@ -1,0 +1,22 @@
+name: Test latest release install
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repo: go-task/task
+      - name: Assert task installed from latest release
+        run: |
+          BIN="$(command -v task || true)"
+          echo "task path: $BIN"
+          case "$BIN" in
+            */go-task/task/latest/*) ;;
+            *) echo "FAIL: task not found in expected latest tool cache dir"; echo "PATH=$PATH"; exit 1 ;;
+          esac
+          task --version
+          echo "PASS"

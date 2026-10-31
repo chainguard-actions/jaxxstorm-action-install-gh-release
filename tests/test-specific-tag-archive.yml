@@ -1,0 +1,37 @@
+name: Test specific tag archive install
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repo: go-task/task
+          tag: v3.38.0
+      - name: Assert task v3.38.0 is installed and on PATH
+        run: |
+          BIN="$(command -v task || true)"
+          echo "task path: $BIN"
+          if [ -z "$BIN" ]; then
+            echo "FAIL: task not found on PATH"
+            echo "PATH=$PATH"
+            exit 1
+          fi
+          case "$BIN" in
+            */go-task/task/v3.38.0/*) ;;
+            *) echo "FAIL: task not installed in expected tool cache dir"; exit 1 ;;
+          esac
+          if [ ! -x "$BIN" ]; then
+            echo "FAIL: task is not executable"
+            exit 1
+          fi
+          VERSION="$(task --version 2>&1)"
+          echo "version: $VERSION"
+          if ! echo "$VERSION" | grep -q "3.38.0"; then
+            echo "FAIL: expected version 3.38.0"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,44 @@
+name: Test pure binary install with rename and chmod
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repo: jqlang/jq
+          tag: jq-1.7.1
+          asset-name: jq-linux-amd64
+          platform: linux
+          arch: amd64
+          extension-matching: disable
+          rename-to: jq
+          chmod: "0755"
+      - name: Assert renamed binary is installed, executable and first on PATH
+        run: |
+          BIN="$(command -v jq || true)"
+          echo "jq path: $BIN"
+          case "$BIN" in
+            */jqlang/jq-linux-amd64/jq-1.7.1/linux-amd64/jq) ;;
+            *) echo "FAIL: jq on PATH is not the installed release binary"; echo "PATH=$PATH"; exit 1 ;;
+          esac
+          if [ ! -x "$BIN" ]; then
+            echo "FAIL: jq is not executable (chmod not applied)"
+            exit 1
+          fi
+          MODE="$(stat -c '%a' "$BIN")"
+          echo "mode: $MODE"
+          if [ "$MODE" != "755" ]; then
+            echo "FAIL: expected mode 755"
+            exit 1
+          fi
+          VERSION="$(jq --version)"
+          echo "version: $VERSION"
+          if [ "$VERSION" != "jq-1.7.1" ]; then
+            echo "FAIL: expected jq-1.7.1"
+            exit 1
+          fi
+          echo "PASS"

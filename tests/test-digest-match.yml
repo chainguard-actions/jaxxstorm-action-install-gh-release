@@ -1,0 +1,29 @@
+name: Test digest verification succeeds
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          repo: prometheus/prometheus
+          tag: v2.37.9
+          digest: 8740d2371c2a40f8473c80060fae5fd95829982f05095f361c28ac351c15ade8
+          platform: linux
+          arch: amd64
+      - name: Assert promtool installed from nested archive directory
+        run: |
+          BIN="$(command -v promtool || true)"
+          echo "promtool path: $BIN"
+          case "$BIN" in
+            */prometheus/prometheus/v2.37.9/linux-amd64/promtool) ;;
+            *) echo "FAIL: promtool not found in expected location on PATH"; echo "PATH=$PATH"; exit 1 ;;
+          esac
+          if [ ! -x "$BIN" ]; then
+            echo "FAIL: promtool not executable"
+            exit 1
+          fi
+          echo "PASS"
